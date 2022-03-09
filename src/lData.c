@@ -1,20 +1,25 @@
-/*
- * =====================================================================================
- *
- *       Filename:  init.c
- *
- *    Description:
- *
- *        Version:  1.0
- *        Created:  03-09-2020 12:13:37
- *       Revision:  none
- *       Compiler:  gcc
- *
- *         Author:  Nabil Abubaker (),
- *   Organization:
- *
- * =====================================================================================
+/* Communication-efficient distributed stratified stochastic gradient decent 
+ * Copyright © 2022 Nabil Abubaker (abubaker.nf@gmail.com)
+ * 
+ * Permission is hereby granted, free of charge, to any person obtaining
+ * a copy of this software and associated documentation files (the "Software"),
+ * to deal in the Software without restriction, including without limitation
+ * the rights to use, copy, modify, merge, publish, distribute, sublicense,
+ * and/or sell copies of the Software, and to permit persons to whom the
+ * Software is furnished to do so, subject to the following conditions:
+ * 
+ * The above copyright notice and this permission notice shall be included
+ * in all copies or substantial portions of the Software.
+ * 
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+ * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES
+ * OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+ * IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM,
+ * DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
+ * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE
+ * OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
+
 #include "basic.h"
 #include "comm.h"
 #include "lData.h"
@@ -47,9 +52,6 @@ void init_lData(ldata *lData){
 }
 
 void free_lData(ldata *lData){
-#ifdef NA_DBG
-    na_log(dbgfp, ">In free lData\n");
-#endif
     if( lData->nnz_per_stratum != NULL ){
         free( lData->nnz_per_stratum );
         lData->nnz_per_stratum = NULL;
@@ -109,9 +111,6 @@ void free_lData(ldata *lData){
 
 void init_local_inds(triplet **mtx, const int* partvec, ldata *gs)
 {
-#ifdef NA_DBG
-    na_log(dbgfp, "\t>in gtl inds.\n");
-#endif
     idx_t *xlcols, *lcols, *gcols, *grows, i, j; 
     gs->xlcols = calloc((gs->nprocs+2), sizeof(*gs->xlcols));
     xlcols = gs->xlcols;
@@ -139,9 +138,6 @@ void init_local_inds(triplet **mtx, const int* partvec, ldata *gs)
         if(grows[i] != -1)
             grows[i] = gs->nlrows++;
 
-#ifdef NA_DBG
-    na_log(dbgfp, "\t\tdone counting local rows=%d and cols=%d.\n", gs->nlrows, gs->nlcols);
-#endif
     for (i = 0; i < gs->ngcols; ++i) {
         if(gcols[i] != -1)
             xlcols[partvec[i]+2]++; 
@@ -150,9 +146,6 @@ void init_local_inds(triplet **mtx, const int* partvec, ldata *gs)
         xlcols[i] += xlcols[i-1]; 
     }
     gs->nlcols = xlcols[gs->nprocs+1];
-#ifdef NA_DBG
-    na_log(dbgfp, "\t\tdone counting for xlcols, new lcols cnt = %d.\n",gs->nlcols);
-#endif
     gs->lcols = malloc(sizeof(*gs->lcols) * gs->nlcols);
     lcols = gs->lcols;
     for (i = 0; i < gs->ngcols; ++i) {
@@ -161,10 +154,6 @@ void init_local_inds(triplet **mtx, const int* partvec, ldata *gs)
             gcols[i] = xlcols[partvec[i]+1]++;
         }
     }
-#ifdef NA_DBG
-    MPI_Barrier(MPI_COMM_WORLD);
-    na_log(dbgfp, "\t\txlcols last 2 vals %d %d\n ", xlcols[gs->nprocs], xlcols[gs->nprocs+1]);
-#endif
     assert(xlcols[gs->nprocs] == xlcols[gs->nprocs+1]);
     assert(xlcols[gs->nprocs] == gs->nlcols);
     for (i = 0; i < gs->nprocs; ++i) {
@@ -176,9 +165,6 @@ void init_local_inds(triplet **mtx, const int* partvec, ldata *gs)
 }
 
 void matrix_to_perStratum(const triplet *M, const int *partvec, ldata *gs){
-#ifdef NA_DBG
-    na_log(dbgfp, "\t> In mtx to per-stratum, my local nnz=%d\n", gs->nnz); 
-#endif
     idx_t i, *cnts;
     /* count how many nnz per stratum */
     gs->nnz_per_stratum = calloc(gs->nprocs, sizeof(*gs->nnz_per_stratum));
@@ -186,23 +172,11 @@ void matrix_to_perStratum(const triplet *M, const int *partvec, ldata *gs){
     for (i = 0; i < gs->nnz; ++i) {
         cnts[partvec[M[i].col]]++;
     }
-#ifdef NA_DBG
-    na_log(dbgfp, "\t\tdone counting, nnz per straum:\n");
-    #ifdef NA_DBG_L2
-    for (i = 0; i < gs->nprocs; ++i) {
-        na_log(dbgfp, "\t\t nnz_per_stratum[%d] = %d\n", i, gs->nnz_per_stratum[i]);
-    } 
-    #endif
-#endif
     /* allocate */
     for (i = 0; i < gs->nprocs; ++i) {
         gs->mtx[i] = malloc(sizeof(**gs->mtx) * cnts[i]);
         cnts[i] = 0;
     }
-#ifdef NA_DBG
-    MPI_Barrier(MPI_COMM_WORLD);
-    na_log(dbgfp, "\t\tdone allocating\n"); 
-#endif
     /* copy triplets to corresponding SE */
     int part;
     for (i = 0; i < gs->nnz; ++i) {
@@ -212,17 +186,11 @@ void matrix_to_perStratum(const triplet *M, const int *partvec, ldata *gs){
 }
 
 void init_naive(const triplet *M, const int *partvec, ldata *gs){
-#ifdef NA_DBG
-    na_log(dbgfp, "\tin init_naive\n"); 
-#endif
     idx_t i, j;
     gs->maxColStrip = 0;
     /* convert input matrix to per stratum */
     gs->mtx = malloc(sizeof(*gs->mtx) * gs->nprocs);
     matrix_to_perStratum(M, partvec, gs);
-#ifdef NA_DBG
-    na_log(dbgfp, "\t\tafter Matrix to per stratumi\n"); 
-#endif
     /* count local cols and rows */
     idx_t *grows;
     gs->gtlrowmap = malloc(gs->ngrows * sizeof(*grows));
@@ -234,9 +202,6 @@ void init_naive(const triplet *M, const int *partvec, ldata *gs){
             grows[gs->mtx[i][j].row] = 1;
         }
     }
-#ifdef NA_DBG
-    na_log(dbgfp, "\t\tlrows counted in grows\n"); 
-#endif
     gs->nlrows = 0;
     for (i = 0; i < gs->ngrows; ++i) 
         if(grows[i] != -1)
@@ -247,9 +212,6 @@ void init_naive(const triplet *M, const int *partvec, ldata *gs){
             //gs->mtx[i][j].col %= 512; /* TODO FIXME remove this */
         }
     }
-#ifdef NA_DBG
-    na_log(dbgfp, "\t\tgrow IDs converted to lrows\n"); 
-#endif
     gs->xlcols = calloc((gs->nprocs+2), sizeof(*gs->xlcols));
     for (i = 0; i < gs->ngcols; ++i) {
         gs->xlcols[partvec[i]+2]++;
@@ -267,14 +229,8 @@ void init_naive(const triplet *M, const int *partvec, ldata *gs){
     assert(gs->xlcols[gs->nprocs] == gs->xlcols[gs->nprocs+1]);
     gs->qmat = malloc(sizeof(*gs->qmat) * gs->ngcols * gs->f);
     gs->rmat = malloc(sizeof(*gs->rmat) * gs->nlrows * gs->f);
-#ifdef NA_DBG
-    na_log(dbgfp, "\t\tlocal mats allocated\n"); 
-#endif
     mat_init(gs->qmat, gs->ngcols*gs->f, gs->f);
     mat_init(gs->rmat, gs->nlrows*gs->f, gs->f);
-#ifdef NA_DBG
-    na_log(dbgfp, "\t\tlocal mats initialized\n"); 
-#endif
 }
 
 void init_naive_new(const triplet *M, const int *partvec, ldata *gs){
@@ -288,9 +244,6 @@ void init_naive_new(const triplet *M, const int *partvec, ldata *gs){
     /* convert input matrix to per stratum */
     gs->mtx = malloc(sizeof(*gs->mtx) * gs->nprocs);
     matrix_to_perStratum(M, partvec, gs);
-#ifdef NA_DBG
-    na_log(dbgfp, "\tafter Matrix to per stratumi\n"); 
-#endif
     setIDXTArrVal(grows, gs->ngrows, -1);
     setIDXTArrVal(gcols, gs->ngcols, -1);
     for (i = 0; i < gs->nprocs; ++i) {
@@ -345,9 +298,6 @@ void init_naive_new(const triplet *M, const int *partvec, ldata *gs){
 }
 
 void setup_ldata(const triplet *M, ldata *lData, const int *partvec, const int comm_type, const int f) {
-#ifdef NA_DBG
-    na_log(dbgfp, "> In Initialize lData\n");
-#endif
     int nprocs, myrank;
     MPI_Comm_rank(MPI_COMM_WORLD, &myrank);
     MPI_Comm_size(MPI_COMM_WORLD, &nprocs);
@@ -363,13 +313,7 @@ void setup_ldata(const triplet *M, ldata *lData, const int *partvec, const int c
     /* convert input matrix to per stratum */
     lData->mtx = malloc(sizeof(*lData->mtx) * nprocs);
     matrix_to_perStratum(M, partvec, lData);
-#ifdef NA_DBG
-    na_log(dbgfp, "\tafter Matrix to per stratumi\n"); 
-#endif
     init_local_inds(lData->mtx, partvec, lData);
-#ifdef NA_DBG
-    na_log(dbgfp, "\tafter init local inds\n"); 
-#endif
 
     lData->nnz_per_row_l = malloc(lData->nlrows * sizeof(*lData->nnz_per_row_l));
     lData->nnz_per_col_l = malloc(lData->nlcols * sizeof(*lData->nnz_per_col_l));
@@ -386,10 +330,6 @@ void setup_ldata(const triplet *M, ldata *lData, const int *partvec, const int c
        }
     } 
 
-#ifdef NA_DBG
-    MPI_Barrier(MPI_COMM_WORLD);
-    na_log(dbgfp, "\tDone with col_update_order\n"); 
-#endif
     /* init factor matrices */
 
     lData->qmat = malloc(sizeof(*lData->qmat) * lData->nlcols * lData->f);

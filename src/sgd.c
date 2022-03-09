@@ -1,3 +1,25 @@
+/* Communication-efficient distributed stratified stochastic gradient decent 
+ * Copyright © 2022 Nabil Abubaker (abubaker.nf@gmail.com)
+ * 
+ * Permission is hereby granted, free of charge, to any person obtaining
+ * a copy of this software and associated documentation files (the "Software"),
+ * to deal in the Software without restriction, including without limitation
+ * the rights to use, copy, modify, merge, publish, distribute, sublicense,
+ * and/or sell copies of the Software, and to permit persons to whom the
+ * Software is furnished to do so, subject to the following conditions:
+ * 
+ * The above copyright notice and this permission notice shall be included
+ * in all copies or substantial portions of the Software.
+ * 
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+ * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES
+ * OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+ * IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM,
+ * DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
+ * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE
+ * OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ */
+
 #include "sgd.h"
 #include "util.h"
 #include "basic.h"
@@ -45,9 +67,6 @@ inline real_t predictRating(real_t *r_u, real_t *p_i, real_t itemBias,
 
 void update_l2(real_t *rmat, real_t *qmat, const int f, idx_t nnz, triplet *M, real_t stepSize, real_t lambda)
 {
-#ifdef NA_DBG
-    na_log(dbgfp, "> inside update_l2\n");
-#endif
     idx_t i, nnz_idx, j;
     double err; 
     real_t *tpq, *tpr, tmp;
@@ -74,9 +93,6 @@ void update_l2(real_t *rmat, real_t *qmat, const int f, idx_t nnz, triplet *M, r
 }
 
 void update_l2w(real_t *rmat, real_t *qmat, const int f, idx_t nnz, triplet *M, real_t stepSize, real_t lambda) {
-#ifdef NA_DBG
-    na_log(dbgfp, "> inside _sgd_l\n");
-#endif
     idx_t i, j, nnz_idx;
     double err, f1, f2;
     real_t *tpq, *tpr, tmp;
@@ -112,9 +128,6 @@ void _sgd_l(real_t *rmat, real_t *qmat, const int f, idx_t nnz, triplet *M, real
 void _sgd_l_advanced(real_t *rmat, real_t *qmat, int f, idx_t nnz, triplet *M, real_t *b_r,
         real_t *b_q, real_t a, real_t b, real_t item_mean) {
 
-#ifdef NA_DBG
-    na_log(dbgfp, "> inside _sgd_l\n");
-#endif
     idx_t i, j,  row, col;
     real_t computedRating, err, *tpq, *tpr;
     for (i = 0; i < nnz; i++) {
@@ -142,9 +155,6 @@ void _sgd_l_advanced(real_t *rmat, real_t *qmat, int f, idx_t nnz, triplet *M, r
 double compute_loss_LS1(real_t *rmat, real_t *qmat, idx_t f, idx_t nnz, triplet *M) {
     idx_t i,j;
     double sum = 0.0, loss, *tpq, *tpr;
-#ifdef NA_DBG
-    na_log(dbgfp, "\t> inside Compute Error\n"); 
-#endif
     for (i = 0; i < nnz; ++i) {
         tpq = &qmat[ M[i].col* f];
         tpr = &rmat[ M[i].row * f];
@@ -203,9 +213,6 @@ double compute_loss(real_t *rmat, real_t *qmat, idx_t f, idx_t nnz, triplet *M, 
 real_t compute_error(real_t *rmat, real_t *qmat, idx_t f, idx_t nnz, triplet *M) {
     idx_t i,j, row, col;
     real_t sum = 0.0, computedRating, err, *tpq, *tpr;
-#ifdef NA_DBG
-    na_log(dbgfp, "\t> inside Compute Error\n"); 
-#endif
     for (i = 0; i < nnz; ++i) {
         row = M[i].row;
         col = M[i].col;

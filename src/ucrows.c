@@ -1,3 +1,25 @@
+/* Communication-efficient distributed stratified stochastic gradient decent 
+ * Copyright © 2022 Nabil Abubaker (abubaker.nf@gmail.com)
+ * 
+ * Permission is hereby granted, free of charge, to any person obtaining
+ * a copy of this software and associated documentation files (the "Software"),
+ * to deal in the Software without restriction, including without limitation
+ * the rights to use, copy, modify, merge, publish, distribute, sublicense,
+ * and/or sell copies of the Software, and to permit persons to whom the
+ * Software is furnished to do so, subject to the following conditions:
+ * 
+ * The above copyright notice and this permission notice shall be included
+ * in all copies or substantial portions of the Software.
+ * 
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+ * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES
+ * OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+ * IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM,
+ * DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
+ * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE
+ * OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ */
+
 #include "basic.h"
 #include "comm.h"
 #include "def.h"
@@ -242,11 +264,6 @@ void get_shared_cols(triplet *M, idx_t nnz, idx_t no_global_cols, int *col_updat
     MPI_Allgather(MPI_IN_PLACE, 0, MPI_DATATYPE_NULL, mybitstring, no_bs, MPI_INT,
             MPI_COMM_WORLD);
 
-#ifdef NA_DBG
-    for (i = 0; i < nprocs; ++i) {
-        na_log(dbgfp, "order[%d] = %d\n", i, order[i]);
-    } 
-#endif
 
     int *tmpbitstring = malloc(sizeof(*tmpbitstring) * no_bs);
     int *cumulative_or_mask = calloc(no_bs, sizeof(*cumulative_or_mask));

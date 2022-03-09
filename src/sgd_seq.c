@@ -1,8 +1,25 @@
-/**
- * @author      : Nabil Abubaker (nabil.abubaker@bilkent.edu.tr)
- * @file        : sgd_seq
- * @created     : Tuesday Aug 04, 2020 17:42:48 +03
+/* Communication-efficient distributed stratified stochastic gradient decent 
+ * Copyright © 2022 Nabil Abubaker (abubaker.nf@gmail.com)
+ * 
+ * Permission is hereby granted, free of charge, to any person obtaining
+ * a copy of this software and associated documentation files (the "Software"),
+ * to deal in the Software without restriction, including without limitation
+ * the rights to use, copy, modify, merge, publish, distribute, sublicense,
+ * and/or sell copies of the Software, and to permit persons to whom the
+ * Software is furnished to do so, subject to the following conditions:
+ * 
+ * The above copyright notice and this permission notice shall be included
+ * in all copies or substantial portions of the Software.
+ * 
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+ * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES
+ * OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+ * IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM,
+ * DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
+ * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE
+ * OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
+
 
 #include <stdlib.h>
 #include "basic.h"
@@ -51,11 +68,6 @@ void Read_Matrix(char* filename, triplet **M, idx_t *nrows, idx_t *ncols, idx_t 
     for (i = 0; i < *nnz; ++i) {
         fgets(line, 128, fp);
         sscanf(line, "%u %u %lf\n", &tt.row, &tt.col, &tt.val );
-#ifdef NA_DBG
-        if(!i)
-            na_log(dbgfp, "\t 2x read first line %zu %zu %lf\n", tt.row, tt.col, tt.val);
-        assert(trow <= gs->ngrows);
-#endif
         tt.row--; tt.col--; //make col and row inds start from 0
         ((*nnz_per_row)[tt.row])++;
         ((*nnz_per_col)[tt.col])++;
@@ -78,9 +90,6 @@ void Read_info(char *filename, idx_t *nnz, idx_t *nrows, idx_t *ncols){
 int main(int argc, char *argv[])
 {
 
-#ifdef NA_DBG
-    fprintf(stderr, "Hello from main1\n");
-#endif
 
     char  mFN[1024];
     idx_t i, nnz, nrows, ncols ;
@@ -90,9 +99,6 @@ int main(int argc, char *argv[])
     triplet *M;
     idx_t niter = 10, nwarmup = 2, f = 16;
 
-#ifdef NA_DBG
-    fprintf(stderr, "Hello from main2\n");
-#endif
     if(argc < 2){
         printf("usage: %s matrixFile factorizationRank\n", argv[0]);
         exit(0);
@@ -107,27 +113,14 @@ int main(int argc, char *argv[])
     start_timer(&setuptime);
 #endif
 
-#ifdef NA_DBG
-    fprintf(stderr, "Hello from main\n");
-    sprintf(dbg_fn, "../res/seq-outfile");
-    dbgfp = fopen(dbg_fn, "w");
-    na_log(dbgfp, "> Inside main\nJust before Initialize\n");
-#endif 
 
     idx_t *nnz_per_row, *nnz_per_col; 
     Read_Matrix(mFN, &M, &nrows, &ncols, &nnz, &nnz_per_row, &nnz_per_col);
-#ifdef NA_DBG
-    fprintf(stderr, "after read matrix\n");
-#endif
     qmat = malloc(ncols * f * sizeof(*qmat));
     rmat = malloc(sizeof(*rmat) * nrows * f);
     mat_init(qmat, ncols*f, f);
     mat_init(rmat, nrows*f, f);
 
-#ifdef NA_DBG
-    fprintf(stderr, "after init qmat and rmat\n");
-    fprintf(stderr, "M[0].row=%d, M[0].col=%d, M[0].val=%f\n",M[0].row, M[0].col, M[0].val);
-#endif
 
 #ifdef TAKE_TIMES
     stop_timer(&setuptime);

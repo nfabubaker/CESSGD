@@ -1,20 +1,25 @@
-/*
- * =====================================================================================
- *
- *       Filename:  pardsgd.c
- *
- *    Description:  
- *
- *        Version:  1.0
- *        Created:  02-09-2020 17:17:59
- *       Revision:  none
- *       Compiler:  gcc
- *
- *         Author:  YOUR NAME (), 
- *   Organization:  
- *
- * =====================================================================================
+/* Communication-efficient distributed stratified stochastic gradient decent 
+ * Copyright © 2022 Nabil Abubaker (abubaker.nf@gmail.com)
+ * 
+ * Permission is hereby granted, free of charge, to any person obtaining
+ * a copy of this software and associated documentation files (the "Software"),
+ * to deal in the Software without restriction, including without limitation
+ * the rights to use, copy, modify, merge, publish, distribute, sublicense,
+ * and/or sell copies of the Software, and to permit persons to whom the
+ * Software is furnished to do so, subject to the following conditions:
+ * 
+ * The above copyright notice and this permission notice shall be included
+ * in all copies or substantial portions of the Software.
+ * 
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+ * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES
+ * OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+ * IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM,
+ * DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
+ * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE
+ * OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
+
 #include <stdint.h>
 #include <stdlib.h>
 #include <stdio.h>
@@ -288,9 +293,6 @@ double compute_loss_par(ldata *gs, double lambda) {
 real_t computeDSGD(ldata *lData, sgd_params *params, Comm *cm, sschedule *ss, double initLoss, int nMaxIter, int startingIter)
 {
     int notconverged = 1, niter = startingIter, cbidx, sid;
-#ifdef NA_DBG
-    na_log(dbgfp, "In Compute DSGD.\n");
-#endif
     double  prevLoss = 0.0, currLoss = 0.0;
 
     cm->epochID = 0;
@@ -319,9 +321,6 @@ real_t computeDSGD(ldata *lData, sgd_params *params, Comm *cm, sschedule *ss, do
 #ifdef TAKE_TIMES
             stop_timer(&lsgdtime);
             start_timer(&commtime);
-#endif
-#ifdef NA_DBG
-            na_log(dbgfp, "\t>after sgd_l iter %d stratum %d.\n", niter, sid);
 #endif
             communicate_qmat_rows(lData->qmat, lData, cm, ss, sid);
 #ifdef TAKE_TIMES
@@ -369,24 +368,15 @@ void gen_rand_pvec(int * const rpvec, int * const colpvec, const int ngrows, con
  */
 
     if (gs->myrank == 0) {
-        #ifdef NA_DBG
-            na_log(dbgfp, "in gen rand pvec\n"); 
-        #endif
             idx_t i, tcnt = 0;
             const int nlarger = ngrows > ngcols ? ngrows : ngcols;
             uint32_t *permM = malloc(nlarger * sizeof(uint32_t));
             gen_perm_arr(permM, ngrows);
-        #ifdef NA_DBG
-            na_log(dbgfp, "\tdone row partvec\n"); 
-        #endif
             if(gs->use_pfile == 0){
                 for (i = 0; i < ngrows; ++i) {
                     rpvec[permM[i]] = (tcnt++  % gs->nprocs);
                 }
             }
-        #ifdef NA_DBG
-            na_log(dbgfp, "\tdone row partvec\n"); 
-        #endif
             gen_perm_arr(permM, ngcols);
             if(gs->use_randColDist == 1){
                 tcnt = 0;
@@ -394,9 +384,6 @@ void gen_rand_pvec(int * const rpvec, int * const colpvec, const int ngrows, con
                     colpvec[permM[i]] = (tcnt++  % gs->nprocs);
                 }
             }
-        #ifdef NA_DBG
-            na_log(dbgfp, "\tdone col partvec\n"); 
-        #endif
     }
     if(gs->use_pfile == 0){
         MPI_Bcast(rpvec, ngrows, MPI_INT, 0, MPI_COMM_WORLD);
@@ -424,15 +411,6 @@ void start_sgd_instance(triplet *M, ldata *lData, Comm *cm, sschedule *ss, genst
 
 #ifdef TAKE_TIMES
     stop_timer(&(setuptime));
-#endif
-#ifdef NA_DBG
-    MPI_Barrier(MPI_COMM_WORLD);
-    na_log(dbgfp, "Initializatio Done.\n");
-    assert(lData->nnz > 0);
-#endif
-#ifdef NA_DBG
-    MPI_Barrier(MPI_COMM_WORLD);
-    na_log(dbgfp, "Initialization Done.\n");
 #endif
     sgd_params params;
     params.init_eps = gs->eps; params.lambda = gs->lambda; 
@@ -486,16 +464,6 @@ int main(int argc, char *argv[])
     char fname[1024], name[1024];
     substring(fname, gs.mtxFN);
     substring_b(name, fname);
-#ifdef NA_DBG
-    struct stat st = {0};
-
-    if (stat("./dbg_logs", &st) == -1) {
-        mkdir("./dbg_logs", 0700);
-    }
-    sprintf(dbg_fn, "./dbg_logs/outfile-%s-%d-%d", name, gs.myrank, gs.nprocs);
-    dbgfp = fopen(dbg_fn, "w");
-    na_log(dbgfp, "init params done\n");
-#endif 
     /* read and distr input matrix  */
     read_metadata(gs.mtxFN, &lData.ngrows, &lData.ngcols, &lData.gnnz);
     rpvec = malloc(lData.ngrows * sizeof(*rpvec));
@@ -506,9 +474,6 @@ int main(int argc, char *argv[])
     gen_rand_pvec(rpvec, colpvec, lData.ngrows, lData.ngcols, &gs);
     init_lData(&lData);
     read_matrix_bc(gs.mtxFN, &M, rpvec, &lData);
-#ifdef NA_DBG
-    na_log(dbgfp, "reading data done\n"); 
-#endif
     int comm_type = gs.comm_type;
     for (i = 0; i < gs.fVals[0]; ++i) {
         gs.f = gs.fVals[i+1];

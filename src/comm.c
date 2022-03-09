@@ -1,20 +1,28 @@
-/*
- * =====================================================================================
- *
- *       Filename:  comm.c
- *
- *    Description:  
- *
- *        Version:  1.0
- *        Created:  03-09-2020 12:15:49
- *       Revision:  none
- *       Compiler:  gcc
- *
- *         Author:  YOUR NAME (), 
- *   Organization:  
- *
- * =====================================================================================
+/* Communication-efficient distributed stratified stochastic gradient decent 
+ * Copyright © 2022 Nabil Abubaker (abubaker.nf@gmail.com)
+ * 
+ * Permission is hereby granted, free of charge, to any person obtaining
+ * a copy of this software and associated documentation files (the "Software"),
+ * to deal in the Software without restriction, including without limitation
+ * the rights to use, copy, modify, merge, publish, distribute, sublicense,
+ * and/or sell copies of the Software, and to permit persons to whom the
+ * Software is furnished to do so, subject to the following conditions:
+ * 
+ * The above copyright notice and this permission notice shall be included
+ * in all copies or substantial portions of the Software.
+ * 
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+ * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES
+ * OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+ * IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM,
+ * DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
+ * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE
+ * OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
+
+
+
+
 #include <mpi.h>
 #include <stdint.h>
 #include <stdlib.h>
@@ -41,10 +49,6 @@ void SM_S_afterUpdate(Comm *cm, const ldata *lData, const sschedule *ss,  const 
         setIDXTArrZero(tcnts, cm->nprocs); 
         nsendto = 0;
         oidx = ss->sorder[i]; //which Column stripe I will be updating at SE i 
-#ifdef NA_DBG
-
-        na_log(dbgfp, "\t\tin Schedule messages AFTER UPDATE, just before counting, nprocs=%d, sidx = %d oidx = %d\n", cm->nprocs, i, oidx);
-#endif
         /* loop over each stratum's local columns and determine which processors update them first*/
         for (j = lData->xlcols[oidx]; j < lData->xlcols[oidx+1]; ++j) {
             pid = col_update_order[lData->lcols[j]];
@@ -54,17 +58,6 @@ void SM_S_afterUpdate(Comm *cm, const ldata *lData, const sschedule *ss,  const 
                 tcnts[pid]++; 
             }
         }
-#ifdef NA_DBG
-
-        /*         na_log(dbgfp,"\n");
-         *         for (j = 0; j < gs->nprocs; ++j) {
-         *             na_log(dbgfp," tcnts[%d]=%d", j, tcnts[j]);
-         *         }
-         *         na_log(dbgfp,"\n");
-         */
-        MPI_Barrier(MPI_COMM_WORLD);
-        na_log(dbgfp, "\t\tin Schedule messages, done counting first update for stratum %d, nsendto=%d\n", i, nsendto);
-#endif
 
         cm->nsend[i] = nsendto;
         cm->xsendinds[i] = realloc(cm->xsendinds[i] , sizeof(*cm->xsendinds[i]) * (nsendto+2));
@@ -126,9 +119,6 @@ void SM_R_afterUpdate(Comm *cm, const ldata *lData, const sschedule *ss,const  i
             }
         }
     }
-#ifdef NA_DBG
-    na_log(dbgfp, "\tdone counting recv from each p at each stratum\n");
-#endif
     /* create recvList and xrecvinds arrays */
     for (i = 0; i < nprocs; ++i) {
         cm->xrecvinds[i] = realloc(cm->xrecvinds[i] ,(tcnts[i]+2) * sizeof(*cm->xrecvinds[i]));
@@ -137,11 +127,6 @@ void SM_R_afterUpdate(Comm *cm, const ldata *lData, const sschedule *ss,const  i
 
         ttcnts[i] = tcnts[i] = 0;
     }
-#ifdef NA_DBG
-    MPI_Barrier(MPI_COMM_WORLD);
-    na_log(dbgfp, "\tdone ccreate recvList and xrecvinds arrays\n");
-
-#endif
     /*count # inds to be recvd per stratum per processor  */
     for (i = 0; i < nprocs; ++i) {
         if(recvcnts[i] && i != cm->myrank){
@@ -158,10 +143,6 @@ void SM_R_afterUpdate(Comm *cm, const ldata *lData, const sschedule *ss,const  i
             }
         }
     }
-#ifdef NA_DBG
-    MPI_Barrier(MPI_COMM_WORLD);
-    na_log(dbgfp, "\tdone count # inds to be recvd per stratum per processor\n");
-#endif
     /* prefix sum & allocate recvinds arrays */
     for (i = 0; i < nprocs; ++i) {
         for (j = 2; j < cm->nrecv[i]+2; ++j) {
@@ -169,10 +150,6 @@ void SM_R_afterUpdate(Comm *cm, const ldata *lData, const sschedule *ss,const  i
         }
         cm->recvinds[i] = realloc(cm->recvinds[i] , sizeof(*cm->recvinds[i]) * cm->xrecvinds[i][cm->nrecv[i]+1]);
     }
-#ifdef NA_DBG
-    MPI_Barrier(MPI_COMM_WORLD);
-    na_log(dbgfp, "\tdone prefix sum + allocating recvinds\n");
-#endif
     /* fille recvinds arrays */
     for (i = 0; i < nprocs; ++i) {
         if(recvcnts[i] > 0 && i!= cm->myrank){
@@ -185,10 +162,6 @@ void SM_R_afterUpdate(Comm *cm, const ldata *lData, const sschedule *ss,const  i
             }
         }
     }
-#ifdef NA_DBG
-    MPI_Barrier(MPI_COMM_WORLD);
-    na_log(dbgfp, "\tdone filling recvinds\n");
-#endif
 }
 
 void SM_S_beforeNeeded(Comm *cm, const ldata *lData, const sschedule *ss,const  int *col_update_order)
@@ -204,10 +177,6 @@ void SM_S_beforeNeeded(Comm *cm, const ldata *lData, const sschedule *ss,const  
         setIDXTArrZero(tcnts, cm->nprocs); 
         nsendto = 0;
         oidx = ss->sorder[i]; //which Column stripe I will be updating at SE i 
-#ifdef NA_DBG
-
-        na_log(dbgfp, "\t\tin Schedule messages AFTER UPDATE, just before counting, nprocs=%d, sidx = %d oidx = %d\n", cm->nprocs, i, oidx);
-#endif
         /* loop over each stratum's local columns and determine which processors update them first*/
         for (j = lData->xlcols[oidx]; j < lData->xlcols[oidx+1]; ++j) {
             pid = col_update_order[lData->lcols[j]];
@@ -217,17 +186,6 @@ void SM_S_beforeNeeded(Comm *cm, const ldata *lData, const sschedule *ss,const  
                 tcnts[pid]++; 
             }
         }
-#ifdef NA_DBG
-
-        /*         na_log(dbgfp,"\n");
-         *         for (j = 0; j < gs->nprocs; ++j) {
-         *             na_log(dbgfp," tcnts[%d]=%d", j, tcnts[j]);
-         *         }
-         *         na_log(dbgfp,"\n");
-         */
-        MPI_Barrier(MPI_COMM_WORLD);
-        na_log(dbgfp, "\t\tin Schedule messages, done counting first update for stratum %d, nsendto=%d\n", i, nsendto);
-#endif
         cm->nsend[i] = nsendto;
         cm->xsendinds[i] = realloc(cm->xsendinds[i] , sizeof(*cm->xsendinds[i]) * (nsendto+2));
         xsendinds = cm->xsendinds[i];
@@ -268,9 +226,6 @@ void SM_S_beforeNeeded(Comm *cm, const ldata *lData, const sschedule *ss,const  
 }
 
 void SM_R_beforeNeeded(Comm *cm, const ldata *lData, const sschedule *ss, const int *partvec, const idx_t *recvcnts, idx_t **trecvbuf){
-#ifdef NA_DBG
-    na_log(dbgfp, "\tIn Recv msg schedule - BEFORE_NEEDED\n"); 
-#endif
     idx_t i, j, *tcnts, *ttcntsR, *ttcntsA, **recvgtlmapR;
     int nprocs = cm->nprocs;
     cm->recvListR = realloc(cm->recvListR , sizeof(*cm->recvListR) * cm->nprocs);
@@ -306,9 +261,6 @@ void SM_R_beforeNeeded(Comm *cm, const ldata *lData, const sschedule *ss, const 
             }
         }
     }
-#ifdef NA_DBG
-    na_log(dbgfp, "\tdone counting recv from each p at each stratum\n");
-#endif
     /* create recvList and xrecvinds arrays */
     for (i = 0; i < nprocs; ++i) {
         cm->xrecvinds[i] = calloc((cm->nrecvA[i]+2) , sizeof(*cm->xrecvinds[i]));
@@ -320,20 +272,6 @@ void SM_R_beforeNeeded(Comm *cm, const ldata *lData, const sschedule *ss, const 
         ttcntsR[i] = tcnts[i] = 0;
         ttcntsA[i] = cm->nrecvA[i] = 0;
     }
-#ifdef NA_DBG
-    MPI_Barrier(MPI_COMM_WORLD);
-    /*     na_log(dbgfp, "\tdone ccreate recvList and xrecvinds arrays\n");
-     *     {
-     *         volatile int tt = 0;
-     *         printf("PID %d on %d ready for attach\n",gs->myrank,  getpid());
-     *         fflush(stdout);
-     *         while (0 == tt)
-     *             sleep(5);
-     *     }
-     */
-
-
-#endif
     /*count # inds to be recvd per stratum per processor  */
     for (i = 0; i < nprocs; ++i) {
         if(recvcnts[i] && i != cm->myrank){
@@ -359,10 +297,6 @@ void SM_R_beforeNeeded(Comm *cm, const ldata *lData, const sschedule *ss, const 
             }
         }
     }
-#ifdef NA_DBG
-    MPI_Barrier(MPI_COMM_WORLD);
-    na_log(dbgfp, "\tdone count # inds to be recvd per stratum per processor\n");
-#endif
     /* prefix sum & allocate recvinds arrays */
     for (i = 0; i < nprocs; ++i) {
         for (j = 2; j < cm->nrecvA[i]+2; ++j) {
@@ -371,10 +305,6 @@ void SM_R_beforeNeeded(Comm *cm, const ldata *lData, const sschedule *ss, const 
         cm->recvinds[i] = realloc(cm->recvinds[i] , sizeof(*cm->recvinds[i]) * cm->xrecvinds[i][cm->nrecvA[i]+1]);
         cm->recvbuffDW[i] = realloc(cm->recvbuffDW[i] , sizeof(*cm->recvbuffDW[i]) * cm->xrecvinds[i][cm->nrecvA[i]+1]*cm->commUnitSize);
     }
-#ifdef NA_DBG
-    MPI_Barrier(MPI_COMM_WORLD);
-    na_log(dbgfp, "\tdone prefix sum + allocating recvinds\n");
-#endif
     /* fille recvinds arrays */
     for (i = 0; i < nprocs; ++i) {
         if(recvcnts[i] > 0 && i!= cm->myrank){
@@ -388,21 +318,6 @@ void SM_R_beforeNeeded(Comm *cm, const ldata *lData, const sschedule *ss, const 
             }
         }
     }
-#ifdef NA_DBG
-    MPI_Barrier(MPI_COMM_WORLD);
-    na_log(dbgfp, "\tdone filling recvinds\n");
-    int SEID;
-    for (SEID = 0; SEID < nprocs; ++SEID) {
-        for (j = 0; j < cm->nrecvR[SEID]; ++j) {
-            int rpid = cm->recvListR[SEID][j];
-            int rCBidx = get_cbidx(rpid, nprocs, SEID, ss->seed);
-            int SEidx = (get_se(cm->myrank, nprocs, rCBidx, ss->seed) - 1 + nprocs) % nprocs; /* get the SE when will I update CB*/
-            int CBidx = get_cbidx(cm->myrank, nprocs, SEidx, ss->seed);
-            int A_lpid = cm->recvgtlmapA[SEidx][rpid];
-            na_log(dbgfp, "\t\tCBidx=%d rCBidx=%d pid=%d recvsizeA[%d][%d]=%d | recvsizeR[%d][%d]=%d\n", CBidx, rCBidx, rpid, SEidx,A_lpid,cm->xrecvinds[SEidx][A_lpid+1]-cm->xrecvinds[SEidx][A_lpid], SEID, j, cm->recvSizeR[SEID][j]); 
-        }        
-    }
-#endif
     /* cleanup */
     for (i = 0; i < cm->nprocs; ++i) {
         free(recvgtlmapR[i]);
@@ -427,9 +342,6 @@ int smart_schedule_msg_send(sschedule const *ss, int px, int py, int SE, int K){
 }
 
 void SM_S_Smart(Comm *cm, const ldata *lData, const sschedule *ss, const int *col_update_order){
-#ifdef NA_DBG
-    na_log(dbgfp, "\tin SM_S_Smart\n");
-#endif
     idx_t  j, tmpcnt, nsendto, *xsendinds, **tcnts, **gtlmap;
     int dist, mID, sendATSE, *sendList, pid, oidx, i;
     tcnts = cm->comm_L2_2DauxBuff1;
@@ -440,18 +352,6 @@ void SM_S_Smart(Comm *cm, const ldata *lData, const sschedule *ss, const int *co
     for (i = 0; i < cm->nprocs; ++i) {
         setIDXTArrZero(tcnts[i], cm->nprocs); 
     }
-#ifdef NA_DBG
-    na_log(dbgfp, "\t\t tmp arrays initialized\n");
-    /*     {
-     *         volatile int tt = 0;
-     *         printf("PID %d on %d ready for attach\n",cm->myrank,  getpid());
-     *         fflush(stdout);
-     *         while (0 == tt)
-     *             sleep(5);
-     *     }
-     */
-
-#endif
     for (i = 0; i < cm->nprocs; ++i) {
         nsendto = 0;
         oidx = ss->sorder[i]; //which Column stripe I will be updating at SE i 
@@ -466,9 +366,6 @@ void SM_S_Smart(Comm *cm, const ldata *lData, const sschedule *ss, const int *co
             }
         }
     }
-#ifdef NA_DBG
-    na_log(dbgfp, "\t\tdone counting tcnts at each SE\n");
-#endif
     for (i = 0; i < cm->nprocs; ++i) { /* for each SE */
         setIDXTArrVal(gtlmap[i], cm->nprocs, IDX_T_MAX);
         nsendto = cm->nsend[i];
@@ -495,9 +392,6 @@ void SM_S_Smart(Comm *cm, const ldata *lData, const sschedule *ss, const int *co
             cm->sendinds[i] = realloc(cm->sendinds[i] , sizeof(*cm->sendinds[i]) * xsendinds[nsendto+1]);
         }
     }
-#ifdef NA_DBG
-    na_log(dbgfp, "\t\tdone constructing xsendinds, sendList\n");
-#endif
     //       sendinds = cm->sendinds[i];
     for (i = 0; i < cm->nprocs; ++i) {
         /* fill the local indices to be sent to each processor */
@@ -511,15 +405,6 @@ void SM_S_Smart(Comm *cm, const ldata *lData, const sschedule *ss, const int *co
             }
         }
     }
-#ifdef NA_DBG
-    na_log(dbgfp, "\t\tdone filling sendinds\n");
-#endif
-#ifndef NDEBUG 
-    for (i = 0; i < cm->nprocs; ++i) {
-        if(cm->nsend[i] > 0)
-            assert(cm->xsendinds[i][cm->nsend[i]]==cm->xsendinds[i][cm->nsend[i]+1]);
-    }
-#endif /* ifndef  */
 }
 
 void SM_R_Smart(Comm *cm, const ldata *lData, const sschedule *ss, const  int *partvec,const  idx_t *recvcnts, idx_t **trecvbuf){
@@ -548,9 +433,6 @@ void SM_R_Smart(Comm *cm, const ldata *lData, const sschedule *ss, const  int *p
             }
         }
     }
-#ifdef NA_DBG
-    na_log(dbgfp, "\tdone counting recv from each p at each stratum\n");
-#endif
     /* create recvList and xrecvinds arrays */
     for (i = 0; i < nprocs; ++i) {
         cm->xrecvinds[i] = realloc( cm->xrecvinds[i] ,(tcnts[i]+2) * sizeof(*cm->xrecvinds[i]));
@@ -558,11 +440,6 @@ void SM_R_Smart(Comm *cm, const ldata *lData, const sschedule *ss, const  int *p
         cm->recvList[i] = realloc(cm->recvList[i] , (tcnts[i]) * sizeof(*cm->recvList[i]));
         ttcnts[i] = tcnts[i] = 0;
     }
-#ifdef NA_DBG
-    MPI_Barrier(MPI_COMM_WORLD);
-    na_log(dbgfp, "\tdone ccreate recvList and xrecvinds arrays\n");
-
-#endif
     /*count # inds to be recvd per stratum per processor  */
     for (i = 0; i < nprocs; ++i) {
         if(recvcnts[i] > 0 && i != cm->myrank){
@@ -584,10 +461,6 @@ void SM_R_Smart(Comm *cm, const ldata *lData, const sschedule *ss, const  int *p
             }
         }
     }
-#ifdef NA_DBG
-    MPI_Barrier(MPI_COMM_WORLD);
-    na_log(dbgfp, "\tdone count # inds to be recvd per stratum per processor\n");
-#endif
     /* prefix sum & allocate recvinds arrays */
     for (i = 0; i < nprocs; ++i) {
         for (j = 2; j < cm->nrecv[i]+2; ++j) {
@@ -595,10 +468,6 @@ void SM_R_Smart(Comm *cm, const ldata *lData, const sschedule *ss, const  int *p
         }
         cm->recvinds[i] = realloc(cm->recvinds[i] , sizeof(*cm->recvinds[i]) * cm->xrecvinds[i][cm->nrecv[i]+1]);
     }
-#ifdef NA_DBG
-    MPI_Barrier(MPI_COMM_WORLD);
-    na_log(dbgfp, "\tdone prefix sum + allocating recvinds\n");
-#endif
     /* fille recvinds arrays */
     for (i = 0; i < nprocs; ++i) {
         if(recvcnts[i] > 0 && i!= cm->myrank){
@@ -616,10 +485,6 @@ void SM_R_Smart(Comm *cm, const ldata *lData, const sschedule *ss, const  int *p
             }
         }
     }
-#ifdef NA_DBG
-    MPI_Barrier(MPI_COMM_WORLD);
-    na_log(dbgfp, "\tdone filling recvinds\n");
-#endif
 }
 void schedule_send_messages(Comm *cm, const ldata *lData, const sschedule *ss, const int *col_update_order){
     switch (cm->comm_type) {
@@ -660,16 +525,6 @@ void update_comm(Comm *cm, const ldata *lData, const sschedule *ss, const int *p
     /* schedule_messages */
     schedule_send_messages(cm, lData, ss, col_update_order);
 
-#ifdef NA_DBG
-    na_log(dbgfp, "\tSchedule messages done\n");
-#ifdef NA_DBG_L2
-    for (i = 0; i < nprocs; ++i) {
-        for (j = 0; j < cm->nsend[i]; ++j) {
-            na_log(dbgfp, "\t\tsend #%d to %d has %d entries\n", i, cm->sendList[i][j], (cm->xsendinds[i][j+1] - cm->xsendinds[i][j]));
-        }
-    }
-#endif
-#endif
     /* determine total send cnts per processor */
     sendcnts = cm->comm_L1_auxBuff1;
     setIDXTArrZero(sendcnts, nprocs);
@@ -693,9 +548,6 @@ void update_comm(Comm *cm, const ldata *lData, const sschedule *ss, const int *p
             max_recv = recvcnts[i];
     }
 
-#ifdef NA_DBG
-    na_log(dbgfp, "\t\tsending my send counts to each corresponding processors done, max_send=%d max_recv=%d\n", max_send, max_recv);
-#endif
     tsendbuf = NULL;
     trecvbuf = NULL;
     tsendbuf = realloc(tsendbuf , max_send*sizeof(*tsendbuf));
@@ -712,10 +564,6 @@ void update_comm(Comm *cm, const ldata *lData, const sschedule *ss, const int *p
         }
     }
 
-#ifdef NA_DBG
-    MPI_Barrier(MPI_COMM_WORLD);
-    na_log(dbgfp, "\tcreating trecvbuf done\n");
-#endif
     MPI_Request req[tnrecv];
     tnrecv = 0;
     for (i = 0; i < nprocs; ++i) {
@@ -723,10 +571,6 @@ void update_comm(Comm *cm, const ldata *lData, const sschedule *ss, const int *p
             MPI_Irecv(trecvbuf[i], recvcnts[i], MPI_IDX_T, i, 7, MPI_COMM_WORLD, &req[tnrecv++]);
         }
     }
-#ifdef NA_DBG
-    MPI_Barrier(MPI_COMM_WORLD);
-    na_log(dbgfp, "\tirecv requests issued\n");
-#endif
     int tpidx;
     idx_t tmpvar,tmpcnt,  *tptr;
     for (i = 0; i < nprocs; ++i) {
@@ -744,20 +588,11 @@ void update_comm(Comm *cm, const ldata *lData, const sschedule *ss, const int *p
                     }
                 }
                 if(tpidx == -1) continue; //not in this stratum
-#ifdef NA_DBG
-                /*     tmpvar = cm->xsendinds[j][tpidx+1] - cm->xsendinds[j][tpidx];
-                 *     na_log(dbgfp, "\tcopying %d entries of stratum %d to be sent to p%d\n with local indx %d\n", tmpvar, j, i, tpidx);
-                 */
-#endif
                 for (tmpvar=0, k = cm->xsendinds[j][tpidx]; k < cm->xsendinds[j][tpidx+1]; ++k, ++tmpvar) {
                     assert(cm->sendinds[j][k] < lData->nlcols && cm->sendinds[j][k] >= 0);
                     *(tptr++) = lData->lcols[cm->sendinds[j][k]]; /* assign global col idxs to the buffer */
                 }
                 tmpcnt+= tmpvar;
-#ifdef NA_DBG
-                /*     na_log(dbgfp, "\tdone copying %d entries of stratum %d to be sent to p%d\n with local indx %d\n", tmpvar, j, i, tpidx);
-                */
-#endif
             }
 
 #ifdef NA_DBG_L2
@@ -767,10 +602,6 @@ void update_comm(Comm *cm, const ldata *lData, const sschedule *ss, const int *p
             MPI_Send(tsendbuf, tmpcnt, MPI_IDX_T, i, 7, MPI_COMM_WORLD);
         }
     }
-#ifdef NA_DBG
-    MPI_Barrier(MPI_COMM_WORLD);
-    na_log(dbgfp, "\tall send and recvs done\n");
-#endif
     /* TODO: wait for irecvs and process them, remember the inds are global <12-10-20, yourname> */ 
     MPI_Waitall(tnrecv, req, MPI_STATUSES_IGNORE);
 
@@ -785,17 +616,6 @@ void update_comm(Comm *cm, const ldata *lData, const sschedule *ss, const int *p
      * 
      * #endif
      */
-#ifdef NA_DBG
-    na_log(dbgfp, "\tper-stratum send and recv col indxs exchange done\n");
-    /*     for (i = 0; i < gs->nprocs; ++i) {
-     *         free(trecvbuf[i]);
-     *         trecvbuf[i] = NULL;
-     *     }
-     *     free(trecvbuf); trecvbuf = NULL;
-     *     MPI_Finalize();
-     *     exit(0);
-     */
-#endif
     schedule_recv_messages(cm, lData, ss, partvec, recvcnts, trecvbuf);
     /* allocate send and recv buffers */
 
@@ -826,10 +646,6 @@ void update_comm(Comm *cm, const ldata *lData, const sschedule *ss, const int *p
         cm->recvbuff = realloc(cm->recvbuff , sizeof(*cm->recvbuff) *mxrecv * cm->commUnitSize);
     }
 
-#ifdef NA_DBG
-    //    MPI_Barrier(MPI_COMM_WORLD);
-    na_log(dbgfp, "\tmxsnd=%d, mxrecv=%d, mxnsend=%d, mxnrecv=%d\n",mxsnd, mxrecv, mxnsnd, mxnrecv);
-#endif
 
     cm->sendbuff = realloc(cm->sendbuff , sizeof(*cm->sendbuff)*mxsnd * cm->commUnitSize);
     /* cleanup */
@@ -862,9 +678,6 @@ void prepare_comm(Comm *cm, const ldata *lData, sschedule *ss){
 }
 
 void setup_naiv_comm(Comm *cm, const ldata *lData){
-#ifdef NA_DBG
-    na_log(dbgfp, "\t>In setup naive Comm\n");
-#endif
     //cm->sendbuff = malloc(((gs->ngcols/gs->nprocs) + 1)*gs->f *sizeof(cm->sendbuff));
     cm->sendbuff = malloc(lData->maxColStrip * cm->commUnitSize *sizeof(cm->sendbuff));
     mat_init(cm->sendbuff, lData->maxColStrip * cm->commUnitSize, cm->commUnitSize);
@@ -876,9 +689,6 @@ void setup_naiv_comm(Comm *cm, const ldata *lData){
 
 
 void setup_p2p_comm(Comm *cm, const ldata *lData, const sschedule *ss){
-#ifdef NA_DBG
-    na_log(dbgfp, ">In setup p2p Comm\n");
-#endif
     int i;
 
     cm->sendList = malloc( sizeof(*cm->sendList) * cm->nStms);
@@ -922,9 +732,6 @@ void setup_p2p_comm(Comm *cm, const ldata *lData, const sschedule *ss){
     for (i = 0; i < cm->nStms; ++i) {
         cm->tags[i] = 777+i;
     }
-#ifdef NA_DBG
-    na_log(dbgfp, "\tallocating send and recv buffers done, end of setup comm\n");
-#endif
 
 }
 
@@ -951,9 +758,6 @@ void init_comm(Comm * cm){
 
 void free_comm(Comm *cm){
     
-#ifdef NA_DBG
-    na_log(dbgfp, ">In free Comm\n");
-#endif
     int i;
     if (cm->ucRows != NULL) 
         free_ucrows(cm->ucRows);
@@ -1068,9 +872,6 @@ void free_comm(Comm *cm){
 }
 
 void setup_comm(Comm *cm, const ldata *lData, const sschedule *ss, const int *partvec, const int comm_type, const int use_fixed_length_cm){
-#ifdef NA_DBG
-    na_log(dbgfp, ">In setup Comm\n");
-#endif
     int mypid;
     MPI_Comm_rank(MPI_COMM_WORLD, &mypid);
     cm->use_fixed_length_cb = use_fixed_length_cm;
@@ -1111,19 +912,11 @@ void communicate_qmat_rows_naive(real_t *qmat, const Comm *cm, const sschedule *
         memcpy(tb, &qmat[lData->lcols[i] * f], sizeof(*qmat)*f);
         tb += f;
     }
-#ifdef NA_DBG
-    MPI_Barrier(MPI_COMM_WORLD);
-    na_log(dbgfp, ">in comm all rows, just before sendrecv_replace\n"); 
-#endif
     if(cm->use_fixed_length_cb == 0){
         cidx2 = ss->sorder[(stratumID+1) % K];
         MPI_Sendrecv(cm->sendbuff, (lData->xlcols[cidx+1]-lData->xlcols[cidx])*f, MPI_REAL_T, dst, 777, cm->recvbuff, (lData->xlcols[cidx2+1]-lData->xlcols[cidx2])*f, MPI_REAL_T, src, 777, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
         /* copy back */
         tb = cm->recvbuff;
-#ifdef NA_DBG
-        MPI_Barrier(MPI_COMM_WORLD);
-        na_log(dbgfp, ">in comm all rows, ready to copy data from buffer, sid=%d cidx=%d\n", stratumID, cidx); 
-#endif
         for (i = lData->xlcols[cidx2]; i < lData->xlcols[cidx2+1] ; ++i) {
             memcpy(&qmat[lData->lcols[i] * f], tb , sizeof(*qmat)*f);
             tb += f;
@@ -1131,25 +924,14 @@ void communicate_qmat_rows_naive(real_t *qmat, const Comm *cm, const sschedule *
     }
     else{
         MPI_Sendrecv_replace(cm->sendbuff, bsize * f, MPI_REAL_T, dst, 777, src, 777, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-#ifdef NA_DBG
-        na_log(dbgfp, ">in comm all rows, just after sendrecv_replace\n"); 
-#endif
         /* copy back */
         cidx = ss->sorder[(stratumID+1) % K];
         tb = cm->sendbuff;
-#ifdef NA_DBG
-        MPI_Barrier(MPI_COMM_WORLD);
-        na_log(dbgfp, ">in comm all rows, ready to copy data from buffer, sid=%d cidx=%d\n", stratumID, cidx); 
-#endif
         for (i = lData->xlcols[cidx]; i < lData->xlcols[cidx+1] ; ++i) {
             memcpy(&qmat[lData->lcols[i] * f], tb , sizeof(*qmat)*f);
             tb += f;
         }
     }
-#ifdef NA_DBG
-    MPI_Barrier(MPI_COMM_WORLD);
-    na_log(dbgfp, ">in comm all rows, done\n"); 
-#endif
 }
 
 void communicate_qmat_rows(real_t *qmat, const ldata *lData, const Comm *cm, const sschedule *ss,  int stratumID){
@@ -1166,258 +948,34 @@ void communicate_qmat_rows(real_t *qmat, const ldata *lData, const Comm *cm, con
             break;
     }
 }
-//void communicate_qmat_rows_new(real_t *qmat, const Comm *cm, const int stratumID, const int f, const genst *lData){
-//
-//    int i, cidx,cidx2, dst, src;
-//    idx_t bsize;
-//    dst = (gs->myrank - 1 + gs->nprocs) % gs->nprocs;
-//    src = (gs->myrank + 1) % gs->nprocs;
-//    bsize = (gs->ngcols / gs->nprocs) + (gs->ngcols%gs->nprocs ? 1:0);
-//    real_t *tb;
-//    /* copy to sendbuff */
-//    tb = cm->sendbuff;
-//    cidx = ss->sorder[stratumID]; 
-//#ifdef NA_DBG
-//    MPI_Barrier(MPI_COMM_WORLD);
-//    na_log(dbgfp, ">in comm all rows, before copy to buffer\n"); 
-//#endif
-//    /*     {
-//     *         volatile int tt = 0;
-//     *         printf("PID %d on %d ready for attach\n",gs->myrank,  getpid());
-//     *         fflush(stdout);
-//     *         while (0 == tt)
-//     *             sleep(5);
-//     *     }
-//     */
-//
-//    for (i = gs->xlcols[cidx]; i < gs->xlcols[cidx+1] ; ++i) {
-//        memcpy(&tb[(gs->gtgcolmap[gs->lcols[i]] - gs->xgcols[cidx] )* f], &gs->qmat[i * f], sizeof(*gs->qmat)*f);
-//        //tb += f;
-//    }
-//#ifdef NA_DBG
-//    MPI_Barrier(MPI_COMM_WORLD);
-//    na_log(dbgfp, ">in comm all rows, just before sendrecv_replace\n"); 
-//#endif
-//    if(gs->use_pfile){
-//        cidx2 = ss->sorder[(stratumID+1) % gs->nprocs];
-//        MPI_Sendrecv(cm->sendbuff, (gs->xgcols[cidx+1]-gs->xgcols[cidx])*f, MPI_REAL_T, dst, 777, cm->recvbuff, (gs->xgcols[cidx2+1]-gs->xgcols[cidx2])*f, MPI_REAL_T, src, 777, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-//        /* copy back */
-//        tb = cm->recvbuff;
-//#ifdef NA_DBG
-//        MPI_Barrier(MPI_COMM_WORLD);
-//        na_log(dbgfp, ">in comm all rows, ready to copy data from buffer, sid=%d cidx=%d\n", stratumID, cidx); 
-//#endif
-//        for (i = gs->xlcols[cidx2]; i < gs->xlcols[cidx2+1] ; ++i) {
-//            memcpy(&gs->qmat[i * f], &tb[(gs->gtgcolmap[gs->lcols[i]]-gs->xgcols[cidx2]) * f] , sizeof(*gs->qmat)*f);
-//            //tb += f;
-//        }
-//    }
-//    else{
-//        MPI_Sendrecv_replace(cm->sendbuff, bsize * f, MPI_REAL_T, dst, 777, src, 777, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-//#ifdef NA_DBG
-//        na_log(dbgfp, ">in comm all rows, just after sendrecv_replace\n"); 
-//#endif
-//        /* copy back */
-//        cidx = ss->sorder[(stratumID+1) % gs->nprocs];
-//        tb = cm->sendbuff;
-//#ifdef NA_DBG
-//        MPI_Barrier(MPI_COMM_WORLD);
-//        na_log(dbgfp, ">in comm all rows, ready to copy data from buffer, sid=%d cidx=%d\n", stratumID, cidx); 
-//#endif
-//        for (i = gs->xlcols[cidx]; i < gs->xlcols[cidx+1] ; ++i) {
-//            //memcpy(&gs->qmat[gs->lcols[i] * f], tb , sizeof(*gs->qmat)*f);
-//            memcpy(&gs->qmat[i * f], &tb[(gs->gtgcolmap[gs->lcols[i]]-gs->xgcols[cidx]) * f] , sizeof(*gs->qmat)*f);
-//            //tb += f;
-//        }
-//    }
-//#ifdef NA_DBG
-//    MPI_Barrier(MPI_COMM_WORLD);
-//    na_log(dbgfp, ">in comm all rows, done\n"); 
-//#endif
-//}
-//
 void communicate_updated_qmat_rows(real_t *qmat, const Comm *cm, const int stratumID){
 
     int i, j, f;
     f = cm->commUnitSize;
-#ifdef NA_DBG
-    na_log(dbgfp, "\t> in comm updated qmat rows, stratumID=%d\n", stratumID); 
-    //  if (stratumID == 0) {
-    /*         for (i = 0; i < cm->nsend[stratumID]; ++i) {
-     *             na_log(dbgfp, "stratum %d sendTo %d count=%d\n", stratumID, cm->sendList[stratumID][i], f*(cm->xsendinds[stratumID][i+1]-cm->xsendinds[stratumID][i]));
-     *         }
-     *         for (i = 0; i < cm->nrecv[stratumID]; ++i) {
-     *             na_log(dbgfp, "stratum %d recvFrom %d count=%d\n", stratumID, cm->recvList[stratumID][i], f*(cm->xrecvinds[stratumID][i+1]-cm->xrecvinds[stratumID][i]));
-     *         }
-     */
-    // }
-#endif
 
 
     for (i = 0; i < cm->nrecv[stratumID]; ++i) {
-#ifdef NA_DBG
-        na_log(dbgfp, "\t\trecving %d entries from %d\n", f*(cm->xrecvinds[stratumID][i+1]-cm->xrecvinds[stratumID][i]), cm->recvList[stratumID][i]);
-#endif
         MPI_Irecv(&cm->recvbuff[cm->xrecvinds[stratumID][i] * f], f* (cm->xrecvinds[stratumID][i+1]-cm->xrecvinds[stratumID][i]), MPI_REAL_T, cm->recvList[stratumID][i], cm->tags[stratumID], MPI_COMM_WORLD, &cm->reqst[i]);
     }   
 
-    /* #ifdef NA_DBG
-     *     MPI_Barrier(MPI_COMM_WORLD);
-     *     na_log(dbgfp, "\t\tirecv issued, copy data\n");
-     *     na_log(dbgfp, "\t\tcm->nsend[%d]=%d\n", stratumID,cm->nsend[stratumID]);
-     *     na_log(dbgfp, "\t\tcm->xsendinds[sid][0]=%d\n", cm->xsendinds[stratumID][0]);
-     *     na_log(dbgfp, "\t\tcm->xsendinds[sid][1]=%d\n", cm->xsendinds[stratumID][1]);
-     * #endif
-     */
 
     /* prepare data to send */
     for (i = 0; i < cm->nsend[stratumID]; ++i) {
         for (j = cm->xsendinds[stratumID][i]; j < cm->xsendinds[stratumID][i+1]; ++j) {
-            /* #ifdef NA_DBG
-             *     MPI_Barrier(MPI_COMM_WORLD);
-             *     na_log(dbgfp, "\t\t cm->sendbuff[%d*%d] <-\n", j, f);
-             *     na_log(dbgfp, "\t\t-cm->sendinds[%d] * %d = %d\n", j, f, cm->sendinds[stratumID][j]);
-             * #endif
-             */
             memcpy(&cm->sendbuff[j*f], &qmat[cm->sendinds[stratumID][j] * f], f * sizeof(*cm->sendbuff));
         }
     }
     for (i = 0; i < cm->nsend[stratumID]; ++i) {
-#ifdef NA_DBG
-        na_log(dbgfp, "\t\tsending %d entries to %d\n", f*(cm->xsendinds[stratumID][i+1]-cm->xsendinds[stratumID][i]), cm->sendList[stratumID][i]);
-#endif
         MPI_Send(&cm->sendbuff[cm->xsendinds[stratumID][i]*f], f*(cm->xsendinds[stratumID][i+1]-cm->xsendinds[stratumID][i]), MPI_REAL_T, cm->sendList[stratumID][i], cm->tags[stratumID], MPI_COMM_WORLD);
     }
-    /*     for (i = 0; i < cm->nrecv[stratumID]; ++i) {
-     * #ifdef NA_DBG
-     *         na_log(dbgfp, "\t\trecvng %d entries from %d\n", f*(cm->xrecvinds[stratumID][i+1]-cm->xrecvinds[stratumID][i]), cm->recvList[stratumID][i]);
-     * #endif
-     *         MPI_Recv(&cm->recvbuff[cm->xrecvinds[stratumID][i] * f], f* (cm->xrecvinds[stratumID][i+1]-cm->xrecvinds[stratumID][i]), MPI_REAL_T, cm->recvList[stratumID][i], cm->tags[stratumID], MPI_COMM_WORLD, &cm->stts[i]);
-     *     }   
-     */
-#ifdef NA_DBG
-    na_log(dbgfp, "\t\tStratum %d send/recv issued, waiting all ...\n", stratumID);
-#endif
 
     /* copy recvd data */
     MPI_Waitall(cm->nrecv[stratumID], cm->reqst, cm->stts);
 
-    /*     MPI_Status tmpstts;
-     *     int tidx;
-     * 
-     *     MPI_Waitany(cm->nrecv[stratumID], cm->reqst, &tidx , &tmpstts );
-     *    #ifdef NA_DBG
-     *        na_log(dbgfp, "stratum %d nrecv %d idx %d stts.src=%d stts.err=%d\n", stratumID, cm->nrecv[stratumID], tidx, tmpstts.MPI_SOURCE, tmpstts.MPI_ERROR);
-     *    #endif 
-     */
 
-
-#ifdef NA_DBG
-    //MPI_Barrier(MPI_COMM_WORLD);
-    na_log(dbgfp, "\t\twaiting all done, copying data...\n"); 
-#endif
     for (i = 0; i < cm->nrecv[stratumID]; ++i) {
         for (j = cm->xrecvinds[stratumID][i]; j < cm->xrecvinds[stratumID][i+1]; ++j) {
             memcpy(&qmat[cm->recvinds[stratumID][j]*f], &cm->recvbuff[j*f], f * sizeof(*cm->recvbuff));
         }
     }
 }
-//void communicate_updated_qmat_rows_dwaits(real_t *qmat, const Comm *cm, const int SEID){
-//
-//    int nprocs, i, j, myrank, *current_recv = NULL, f;
-//    MPI_Comm_size(MPI_COMM_WORLD, &nprocs);
-//    MPI_Comm_rank(MPI_COMM_WORLD, &myrank);
-//    f = cm->commUnitSize;
-//    /* TODO move this to comm struct */
-//    current_recv = realloc(current_recv , sizeof(*current_recv) * nprocs);
-//#ifdef NA_DBG
-//    MPI_Barrier(MPI_COMM_WORLD);
-//    na_log(dbgfp, "\t> in comm updated qmat rows, SEID=%d\n", SEID); 
-//
-//#endif
-//    for (i = 0; i < cm->nrecvR[SEID]; ++i) {
-//        int rpid = cm->recvListR[SEID][i];
-//        int rCBidx = get_oidx(rpid, nprocs, SEID);
-//        int SEidx = (get_se(myrank, nprocs, rCBidx, ss->seed) - 1 + nprocs) % nprocs; /* get the SE when will I update CB*/
-//        //int CBidx = get_oidx(gs->myrank, nprocs, SEidx); /* get the column block*/
-//        int A_lpid = cm->recvgtlmapA[SEidx][rpid];
-//
-//        assert((cm->xrecvinds[SEidx][A_lpid+1]-cm->xrecvinds[SEidx][A_lpid]) == cm->recvSizeR[SEID][i]);
-//        MPI_Irecv(&cm->recvbuffDW[SEidx][cm->xrecvinds[SEidx][A_lpid] * f], f* (cm->xrecvinds[SEidx][A_lpid+1]-cm->xrecvinds[SEidx][A_lpid]), MPI_REAL_T, rpid, cm->tags[SEID], MPI_COMM_WORLD, &cm->reqstA[SEidx][A_lpid]);
-//        //MPI_Irecv(&cm->recvbuff[cm->xrecvinds[SEID][i] * f], f* (cm->xrecvinds[SEID][i+1]-cm->xrecvinds[SEID][i]), MPI_REAL_T, cm->recvList[SEID][i], cm->tags[SEID], MPI_COMM_WORLD, &cm->reqst[i]);
-//    }   
-//
-//
-//    /* prepare data to send */
-//    for (i = 0; i < cm->nsend[SEID]; ++i) {
-//        for (j = cm->xsendinds[SEID][i]; j < cm->xsendinds[SEID][i+1]; ++j) {
-//            memcpy(&cm->sendbuff[j*f], &qmat[cm->sendinds[SEID][j] * f], f * sizeof(*cm->sendbuff));
-//        }
-//    }
-//#ifdef NA_DBG
-//    MPI_Barrier(MPI_COMM_WORLD);
-//    na_log(dbgfp, "\t\t Irecv requests have been issued and sendbuff is ready SE=%d\n", SEID); 
-//    /*     {
-//     *         volatile int tt = 0;
-//     *         printf("PID %d on %d ready for attach\n", myrank,  getpid());
-//     *         fflush(stdout);
-//     *         while (0 == tt)
-//     *             sleep(5);
-//     *     }
-//     */
-//#endif
-//    for (i = 0; i < cm->nsend[SEID]; ++i) {
-//        /* #ifdef NA_DBG
-//         *         na_log(dbgfp, "\t\tValue start= %f until %f\n", cm->sendbuff[cm->xsendinds[SEID][i]*f], cm->sendbuff[cm->xsendinds[SEID][i+1]*f]);
-//         *         na_log(dbgfp, "\t\tsending %d entries to %d with tag %d\n", f*(cm->xsendinds[SEID][i+1]-cm->xsendinds[SEID][i]), cm->sendList[SEID][i], cm->tags[SEID]);
-//         * #endif
-//         */
-//        /*     {
-//         *         volatile int tt = 0;
-//         *         printf("PID %d on %d ready for attach\n", myrank,  getpid());
-//         *         fflush(stdout);
-//         *         while (0 == tt)
-//         *             sleep(5);
-//         *     }
-//         */
-//
-//        MPI_Send(&cm->sendbuff[cm->xsendinds[SEID][i]*f], f*(cm->xsendinds[SEID][i+1]-cm->xsendinds[SEID][i]), MPI_REAL_T, cm->sendList[SEID][i], cm->tags[SEID], MPI_COMM_WORLD);
-//
-//        //        MPI_Barrier(MPI_COMM_WORLD);
-//        //    na_log(dbgfp, "\t\tDONE sending %d entries to %d\n", f*(cm->xsendinds[SEID][i+1]-cm->xsendinds[SEID][i]), cm->sendList[SEID][i]);
-//    }
-//#ifdef NA_DBG
-//    na_log(dbgfp, "\t\tsend/recv issued, waiting all ...\n");
-//#endif
-//
-//    if (cm->epochID) {
-//        /* copy recvd data */
-//        MPI_Waitall(cm->nrecvA[SEID], cm->reqstA[SEID], cm->stts);
-//#ifdef NA_DBG
-//        na_log(dbgfp, "\t\twaiting epochID > 0 all done, copying data...\n"); 
-//#endif
-//        for (i = 0; i < cm->nrecvA[SEID]; ++i) {
-//            for (j = cm->xrecvinds[SEID][i]; j < cm->xrecvinds[SEID][i+1]; ++j) {
-//                memcpy(&qmat[cm->recvinds[SEID][j]*f], &cm->recvbuffDW[SEID][j*f], f * sizeof(*cm->recvbuffDW[SEID]));
-//            }
-//        }
-//    }
-//    else{
-//        int k, oc = 0 ; //out count;
-//        int mynextCB = get_oidx(myrank, nprocs, (SEID+1) % nprocs);
-//        for (i = 0; i < cm->nrecvA[SEID]; ++i){
-//            if(get_se(cm->recvListA[SEID][i], nprocs, mynextCB, ss->seed) <= SEID){
-//                cm->reqst[oc] = cm->reqstA[SEID][i];
-//                cm->t_r_inds[oc++] = i;
-//            }
-//        }
-//        MPI_Waitall(oc, cm->reqst, cm->stts );
-//        for (k = 0; k < oc; ++k) {
-//            i = cm->t_r_inds[k];
-//            for (j = cm->xrecvinds[SEID][i]; j < cm->xrecvinds[SEID][i+1]; ++j) {
-//                memcpy(&qmat[cm->recvinds[SEID][j]*f], &cm->recvbuffDW[SEID][j*f], f * sizeof(*cm->recvbuffDW[SEID]));
-//            }
-//        }
-//    }
-//    free(current_recv);
-//}

@@ -355,11 +355,11 @@ void gen_rand_pvec(int * const rpvec, int * const colpvec, const int ngrows, con
     if (gs->myrank == 0) {
             idx_t i, tcnt = 0;
             const int nlarger = ngrows > ngcols ? ngrows : ngcols;
-            uint32_t *permM = malloc(nlarger * sizeof(uint32_t));
+            idx_t *permM = malloc(nlarger * sizeof(*permM));
             gen_perm_arr(permM, ngrows);
             if(gs->use_pfile == 0){
                 for (i = 0; i < ngrows; ++i) {
-                    rpvec[permM[i]] = (tcnt++  % gs->nprocs);
+                    rpvec[permM[i]] = (int)(tcnt++  % gs->nprocs);
                 }
             }
             gen_perm_arr(permM, ngcols);

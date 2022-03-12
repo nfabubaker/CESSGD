@@ -120,9 +120,10 @@ void print_stat(const ldata *gs, const sschedule *ss, const Comm *cm){
         MPI_Reduce(&totVol, &gtotVol, 1, MPI_UNSIGNED, MPI_SUM, 0, MPI_COMM_WORLD);
         //        MPI_Reduce(&maxmaxMsgs, &gmaxmaxMsgs, 1, MPI_UNSIGNED, MPI_MAX, 0, MPI_COMM_WORLD);
     }
-    if(myrank == 0)
+    if(myrank == 0){
         printf("%s\n", "mmMsg smMsg totMsg mmVol smVol totVol smNnzRatio, localCols/globalCols");
         printf("%u %u %u %u %u %u %.5f %.5f\n\n", gmaxmaxMsgs, gsummaxMsgs, gtotMsgs, gmaxmaxVol, gsummaxVol, gtotVol, sumOfMaxNnz/(gs->gnnz/(double)nprocs), gs->nlcols/(double)gs->ngcols);
+    }
 
 } 
 #endif

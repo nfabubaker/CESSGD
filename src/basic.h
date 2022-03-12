@@ -27,7 +27,7 @@
 #include <time.h>
 #include <inttypes.h>
 
-#define idxsize 64
+#define idxsize 32
 #define valsize 32
 #if idxsize == 32
 
@@ -46,8 +46,6 @@
 #define MPI_REAL_T MPI_DOUBLE
 #define GA_SIZE 1000000000
 extern idx_t GA[ ];
-FILE *dbgfp;
-char dbg_fn[1024];
 typedef struct _triplet{
     idx_t row;
     idx_t col;

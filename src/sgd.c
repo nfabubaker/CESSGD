@@ -223,10 +223,6 @@ real_t compute_error(real_t *rmat, real_t *qmat, idx_t f, idx_t nnz, triplet *M)
             computedRating += (*tpr) * (*tpq);
             tpr++; tpq++;
         }
-        /*     #ifdef NA_DBG
-         *         na_log(dbgfp, "\t\tval = %lf computerRating=%lf\n", M[i].val, computedRating); 
-         *     #endif
-         */
         err = (computedRating - M[i].val);
         sum += err * err;
     }

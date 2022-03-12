@@ -4,7 +4,7 @@ dir_guard=@mkdir -p $(@D)
 ODIR=obj
 SRCDIR=src
 BDIR=bin
-CC=mpicc.mpich
+CC=mpicc
 CFLAGS= -O3 -DNDEBUG -Wall -DTAKE_TIMES -DPRINT_STAT
 LFLAGS= -lm
 EXECS=$(BDIR)/cessgd
@@ -27,4 +27,4 @@ clean:
 	rm -f $(ODIR)/*.o core.*
 
 mrproper: clean
-	rm -f $(BDIR)/dsgdpar
+	rm -f $(BDIR)/cessgd

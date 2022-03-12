@@ -7,8 +7,8 @@ BDIR=bin
 CC=mpicc.mpich
 CFLAGS= -O3 -DNDEBUG -Wall -DTAKE_TIMES -DPRINT_STAT
 LFLAGS= -lm
-EXECS=$(BDIR)/dsgdpar
-PARSOURCES=lData.c ucrows.c sschedule.c util.c comm.c sgd.c io.c pardsgd.c
+EXECS=$(BDIR)/cessgd
+PARSOURCES=lData.c ucrows.c sschedule.c util.c comm.c sgd.c io.c cessgd.c
 PAROBJS=$(patsubst %.c, $(ODIR)/%.o, $(PARSOURCES))
 SEQOBJS=$(patsubst %.c, $(ODIR)/%.o, $(SEQSOURCES))
 all: par 
@@ -19,7 +19,7 @@ $(ODIR)/%.o: $(SRCDIR)/%.c
 	$(dir_guard)
 	$(CC) $(CFLAGS) -c -o $@ $< 
 
-$(BDIR)/dsgdpar: $(PAROBJS)
+$(BDIR)/cessgd: $(PAROBJS)
 	$(dir_guard)
 	$(CC) $(CFLAGS) -o $@ $+ $(LFLAGS)
 

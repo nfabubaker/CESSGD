@@ -62,14 +62,12 @@ void print_times(idx_t niter) {
             MPI_COMM_WORLD);
     MPI_Reduce(&setuptime.elapsed, &maxsetuptime, 1, MPI_DOUBLE, MPI_MAX, 0,
             MPI_COMM_WORLD);
-    /*     MPI_Reduce(&commtime, &maxcommtime, 1, MPI_DOUBLE, MPI_MAX, 0,
-     *             MPI_COMM_WORLD);
-     */
     MPI_Reduce(&total, &maxtot, 1, MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
     double n = (double)niter;
     if (myrank == 0) {
         double mult = 1e-6; //for ms 
-        printf("%.5f %.5f %.5f %.5f %.5f %.5f ", maxsetuptime*mult, maxpreptime*mult/n, maxlsgdtime*mult /n , maxcommtime*mult/n, maxsgdtime*mult / n, maxtot*mult);
+        printf("%s\n", "SetupTime CommPrepTime compTime CommTime sgdIterationTime totTime:");
+        printf("%.5f %.5f %.5f %.5f %.5f %.5f\n\n", maxsetuptime*mult, maxpreptime*mult/n, maxlsgdtime*mult /n , maxcommtime*mult/n, maxsgdtime*mult / n, maxtot*mult);
     }
 
 }
@@ -123,7 +121,8 @@ void print_stat(const ldata *gs, const sschedule *ss, const Comm *cm){
         //        MPI_Reduce(&maxmaxMsgs, &gmaxmaxMsgs, 1, MPI_UNSIGNED, MPI_MAX, 0, MPI_COMM_WORLD);
     }
     if(myrank == 0)
-        printf("%u %u %u %u %u %u %.5f %.5f", gmaxmaxMsgs, gsummaxMsgs, gtotMsgs, gmaxmaxVol, gsummaxVol, gtotVol, sumOfMaxNnz/(gs->gnnz/(double)nprocs), gs->nlcols/(double)gs->ngcols);
+        printf("%s\n", "mmMsg smMsg totMsg mmVol smVol totVol smNnzRatio, localCols/globalCols");
+        printf("%u %u %u %u %u %u %.5f %.5f\n\n", gmaxmaxMsgs, gsummaxMsgs, gtotMsgs, gmaxmaxVol, gsummaxVol, gtotVol, sumOfMaxNnz/(gs->gnnz/(double)nprocs), gs->nlcols/(double)gs->ngcols);
 
 } 
 #endif
@@ -133,11 +132,11 @@ void print_usage(char *exec) {
             "Options:\n",
             exec);
 
-    printf("\t-i number of iterations (epochs), default: 10\n");
+    printf("\t-i max. number of iterations (epochs), default: 10\n");
     printf("\t-f number of latent factors, default: 16 NOTE: give as a srtring e.g \"30\"\n");
     printf("\t-l regularization factor (lambda, default=0.0075)\n");
     printf("\t-e learning rate (eps, default=0.0015)\n");
-    printf("\t-c communication type:\n"
+    printf("\t-c Communication type:\n"
             "\t\t0: Block-wise (DSGD)\n"
             "\t\t1: P2P\n"
             "\t\t3: P2P with Hold and Combine\n");
@@ -206,6 +205,7 @@ optional_argument: "::" */
                 gs->comm_type = atoi(optarg);
                 break;
             case 'h':
+                print_usage(argv[0]);
                 break;
             case 'l':
                 gs->lambda = atof(optarg);
@@ -416,7 +416,8 @@ void start_sgd_instance(triplet *M, ldata *lData, Comm *cm, sschedule *ss, genst
     stop_timer(&sgdtime);
 #endif
     if (gs->myrank == 0) {
-        printf("%s %d %d %d %f %f %f ", name, gs->nprocs, gs->comm_type, gs->f, initLoss, finalLoss, initLoss - finalLoss); 
+        printf("%s\n","MatrixName MPI-ranks CommType f initLoss finalLoss LossDiff"); 
+        printf("%s %d %d %d %f %f %f\n\n", name, gs->nprocs, gs->comm_type, gs->f, initLoss, finalLoss, initLoss - finalLoss); 
     }
 #ifdef TAKE_TIMES
     print_times(gs->niter); 

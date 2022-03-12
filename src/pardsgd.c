@@ -33,7 +33,7 @@
 #include "comm.h"
 #include "io.h"
 #include "sgd.h"
-#include "src/basic.h"
+#include "basic.h"
 #include "util.h"
 #include "sschedule.h"
 #include <assert.h>
@@ -125,26 +125,6 @@ void print_stat(const ldata *gs, const sschedule *ss, const Comm *cm){
     if(myrank == 0)
         printf("%u %u %u %u %u %u %.5f %.5f", gmaxmaxMsgs, gsummaxMsgs, gtotMsgs, gmaxmaxVol, gsummaxVol, gtotVol, sumOfMaxNnz/(gs->gnnz/(double)nprocs), gs->nlcols/(double)gs->ngcols);
 
-    /*     if (gs->comm_type == BEFORE_NEEDED) {
-     *         idx_t ttmp[2];
-     *         //MPI_Reduce(cm->nsend, gnsends, nprocs, MPI_UNSIGNED, MPI_MAX, 0, MPI_COMM_WORLD);
-     *         unsigned int gsummaxMsgsR = 0, gsummaxVolR = 0, gmaxmaxMsgsR = 0, gmaxmaxVolR = 0;
-     *         for (i = 0; i < nprocs; ++i) { //for each SE
-     *             ttmp[0] = cm->xrecvinds[i][cm->nrecvA[i]];
-     *             ttmp[1] = cm->nrecvA[i];
-     *             MPI_Reduce(ttmp, lmaxVM, 2, MPI_UNSIGNED, MPI_MAX, 0, MPI_COMM_WORLD);
-     *             gsummaxMsgsR += lmaxVM[1];
-     *             gsummaxVolR += lmaxVM[0];
-     *             if(lmaxVM[0] > gmaxmaxVolR)
-     *                 gmaxmaxVolR = lmaxVM[0];
-     *             if(lmaxVM[1] > gmaxmaxMsgsR)
-     *                 gmaxmaxMsgsR = lmaxVM[1];
-     *         }
-     *         
-     *     if(myrank == 0)
-     *         printf(" %u %u %u %u", gmaxmaxMsgsR, gsummaxMsgsR, gmaxmaxVolR, gsummaxVolR);
-     *     }
-     */
 } 
 #endif
 
@@ -155,13 +135,18 @@ void print_usage(char *exec) {
 
     printf("\t-i number of iterations (epochs), default: 10\n");
     printf("\t-f number of latent factors, default: 16 NOTE: give as a srtring e.g \"30\"\n");
-    printf("\t-l regularization factor (lambda)\n");
-    printf("\t-e learning rate (eps)\n");
-    printf("\t-c communication type: 0: naive 1: P2P send after update 2: P2P send before needed 3: P2P smart\n");
-    printf("\t-s strata schedule type: 0: RING_FIXED_SEED (default) 1: RING_RANDOM_SEED\n");
-    printf("\t-p partition file, if not provided random partitioning of rows and cols is used. \n");
-    printf("\t-d force random partition of column\n");
-    printf("\t-h prints this help message\n");
+    printf("\t-l regularization factor (lambda, default=0.0075)\n");
+    printf("\t-e learning rate (eps, default=0.0015)\n");
+    printf("\t-c communication type:\n"
+            "\t\t0: Block-wise (DSGD)\n"
+            "\t\t1: P2P\n"
+            "\t\t3: P2P with Hold and Combine\n");
+    printf("\t-s Strata schedule type:"
+            "\t\t0: RING_FIXED_SEED (default) picks a seed randomly at first epoch and sticks to it in all epochs\n"
+            "\t\t1: RING_RANDOM_SEED picks a different seed randomly at each epoch\n");
+    printf("\t-p Partition file, if not provided random partitioning of rows and cols is used. \n");
+    printf("\t-d Force random partition of column even if a partition file is provided\n");
+    printf("\t-h Print this help message\n");
 }
 void init_genst(genst *gs){
     gs->f = 16;

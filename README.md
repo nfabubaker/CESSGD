@@ -31,6 +31,9 @@ Usage: bin/cessgd [options] <Matrix file>
 **Matrix file format**  
 The sparse rating matrix should be stored as a list of (row, col, nnz) tuples in [Matrix Market](https://math.nist.gov/MatrixMarket/formats.html) format (.mtx).
 
+**Partition file format**  
+The partition file may contain M rows or M+N rows, where M and N are respectively the rows and cols of the input matrix. Each row has a single integer value between 0 and K-1, where K is the number of parts/processors, indicating that the corresponding input matrix row/col is assigned to this part/processor.  
+
 **Example usage on an MPI cluster**  
 
 ```
